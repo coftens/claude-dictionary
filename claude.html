@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 加载动画魔法词典 🔮</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --panel-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --accent-color: #cc7a00;
+            --accent-hover: #e68a00;
+            --tag-bg: #3d3d3d;
+            --border-color: #444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            background-color: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 30px;
+            color: #fff;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .search-box:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 4px 15px rgba(204, 122, 0, 0.4);
+        }
+
+        .stats {
+            margin: 15px 0;
+            font-size: 0.9rem;
+            color: #888;
+            padding-left: 10px;
+        }
+
+        .word-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .word-card {
+            background-color: var(--panel-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+
+        .word-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            border-color: #555;
+        }
+
+        .word-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .word-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .word-category {
+            font-size: 0.8rem;
+            background-color: var(--tag-bg);
+            color: var(--accent-color);
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-weight: 600;
+        }
+
+        .word-body {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .meaning-item {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .label {
+            color: #888;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 5px;
+            display: inline-block;
+            width: 100px;
+        }
+
+        .value-literal {
+            color: #b5cea8;
+        }
+
+        .value-ai {
+            color: #ce9178;
+            font-weight: 500;
+        }
+
+        .highlight {
+            background-color: rgba(204, 122, 0, 0.3);
+            color: #fff;
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Claude Code 动画词典 🔮</h1>
+    <div class="subtitle">键盘敲烂，AI 捣乱。集成 185 个进行时动词 + 8 个官方结算状态词，支持模糊检索。</div>
+    
+    <input type="text" id="searchBox" class="search-box" placeholder="输入单词、中文释义、分类进行模糊搜索..." autofocus>
+    
+    <div class="stats" id="stats">正在加载词库...</div>
+    
+    <div class="word-list" id="wordList"></div>
+</div>
+
+<script>
+    const dictionary = [
+        // 官方闭合的 8 个结算过去式状态词
+        { word: 'Baked', cat: '官方任务结算词', literal: '烘焙完成', ai: '【任务结束】代码已经在烤箱里烤好了！' },
+        { word: 'Brewed', cat: '官方任务结算词', literal: '酿造完成', ai: '【任务结束】大招/咖啡已经为你煮好了！' },
+        { word: 'Churned', cat: '官方任务结算词', literal: '搅拌完成', ai: '【任务结束】思路与代码已经搅拌均匀！' },
+        { word: 'Cogitated', cat: '官方任务结算词', literal: '苦思冥想完毕', ai: '【任务结束】耗费了大量Token，终于想明白了。' },
+        { word: 'Cooked', cat: '官方任务结算词', literal: '烹饪完毕', ai: '【任务结束】大厨收汁完毕，代码香气扑鼻。' },
+        { word: 'Crunched', cat: '官方任务结算词', literal: '数据处理完毕', ai: '【任务结束】海量数据已经被狠狠地啃完了。' },
+        { word: 'Sautéed', cat: '官方任务结算词', literal: '爆炒完毕', ai: '【任务结束】这几个 Bug 已经被大火爆炒熟透了。' },
+        { word: 'Worked', cat: '官方任务结算词', literal: '工作完毕', ai: '【任务结束】今天的砖就搬到这里了。' },
+
+        // 默认的 185 个运行中状态词
+        { word: 'Accomplishing', cat: '严肃硬核', literal: '完成，实现', ai: '正在搞定它' },
+        { word: 'Actioning', cat: '严肃硬核', literal: '执行，采取行动', ai: '正在落实，正在干' },
+        { word: 'Actualizing', cat: '严肃硬核', literal: '实现，使现实化', ai: '正在把你的需求变成现实' },
+        { word: 'Architecting', cat: '严肃硬核', literal: '架构，设计', ai: '正在设计代码架构' },
+        { word: 'Baking', cat: '厨房重地', literal: '烘焙', ai: '代码正在烤箱里烤着呢' },
+        { word: 'Beaming', cat: '蹦迪摇摆', literal: '眉开眼笑，发射光芒', ai: '带着灿烂的笑容在工作' },
+        { word: 'Beboppin\'', cat: '蹦迪摇摆', literal: '跳比波普爵士舞', ai: '踩着爵士舞步在敲代码' },
+        { word: 'Befuddling', cat: '大脑宕机', literal: '使糊涂，使迷惑', ai: '糟糕，我有点被绕晕了' },
+        { word: 'Billowing', cat: '自然现象', literal: '翻腾，如波浪般翻滚', ai: '思绪如巨浪般翻滚' },
+        { word: 'Blanching', cat: '奇怪彩蛋', literal: '变白，漂白（或吓得脸色发白）', ai: '看到你写的前任代码，吓得脸色苍白' },
+        { word: 'Bloviating', cat: '摸鱼胡闹', literal: '冗长空洞地演讲', ai: '我正在废话文学/吹牛皮' },
+        { word: 'Boogieing', cat: '蹦迪摇摆', literal: '跟着流行音乐跳舞', ai: '动次打次，蹦迪中' },
+        { word: 'Boondoggling', cat: '摸鱼胡闹', literal: '做无意义的工作，浪费时间', ai: '别管我，我正在带薪摸鱼' },
+        { word: 'Booping', cat: '奇怪彩蛋', literal: '轻轻碰一下（比如戳猫狗的鼻子）', ai: '啵一个！轻轻戳一下你的服务器' },
+        { word: 'Bootstrapping', cat: '严肃硬核', literal: '引导，自举', ai: '正在冷启动，正在初始化' },
+        { word: 'Brewing', cat: '厨房重地', literal: '酿造，煮咖啡/茶', ai: '大招正在酿造中' },
+        { word: 'Bunning', cat: '厨房重地', literal: '做成圆面包状', ai: '正在把散乱的代码捏成小馒头' },
+        { word: 'Burrowing', cat: '走迷宫', literal: '挖洞，钻进去', ai: '正在往你项目的底层代码里钻' },
+        { word: 'Calculating', cat: '严肃硬核', literal: '计算', ai: '正在疯狂算数' },
+        { word: 'Canoodling', cat: '摸鱼胡闹', literal: '亲热，瞎搞', ai: '正在和代码卿卿我我' },
+        { word: 'Caramelizing', cat: '厨房重地', literal: '焦糖化', ai: '正在给代码裹上一层诱人的焦糖色' },
+        { word: 'Cascading', cat: '自然现象', literal: '瀑布似地落下，层叠', ai: '正在触发代码的瀑布流响应' },
+        { word: 'Catapulting', cat: '奇怪彩蛋', literal: '用弹弓投射，猛掷', ai: '走你！正在把数据用投石机甩过去' },
+        { word: 'Cerebrating', cat: '严肃硬核', literal: '用脑，思考', ai: '脑细胞（Token）疯狂燃烧中' },
+        { word: 'Channeling', cat: '高端魔法', literal: '引导（灵媒/法术）', ai: '正在通灵，试图连接远古代码之神' },
+        { word: 'Channelling', cat: '高端魔法', literal: '引导（同上，另一种拼写）', ai: '正在通灵，试图连接远古代码之神' },
+        { word: 'Choreographing', cat: '严肃硬核', literal: '编舞，精心编排', ai: '正在编排代码和流程' },
+        { word: 'Churning', cat: '厨房重地', literal: '搅拌（做黄油）', ai: '正在疯狂搅拌思路' },
+        { word: 'Clauding', cat: '奇怪彩蛋', literal: '克劳德化', ai: '官方玩梗：我正在用 Claude 的方式疯狂思考！' },
+        { word: 'Coalescing', cat: '奇怪彩蛋', literal: '合并，联合', ai: '正在把散落一地的代码碎片合并起来' },
+        { word: 'Cogitating', cat: '严肃硬核', literal: '苦思冥想', ai: '正在绞尽脑汁' },
+        { word: 'Combobulating', cat: '大脑宕机', literal: '恢复清醒', ai: '振作起来！让我重组一下语言！' },
+        { word: 'Composing', cat: '严肃硬核', literal: '谱曲，撰写', ai: '正在谱写你的代码交响乐' },
+        { word: 'Computing', cat: '严肃硬核', literal: '计算，电脑处理', ai: '电脑疯狂运转中' },
+        { word: 'Concocting', cat: '厨房重地', literal: '调制，捏造', ai: '正在调制神秘的代码配方' },
+        { word: 'Considering', cat: '严肃硬核', literal: '考虑', ai: '正在盘算这代码该怎么写' },
+        { word: 'Contemplating', cat: '严肃硬核', literal: '沉思，冥想', ai: '陷入了沉思' },
+        { word: 'Cooking', cat: '厨房重地', literal: '做饭，烹饪', ai: '别催，大厨正在收汁' },
+        { word: 'Crafting', cat: '严肃硬核', literal: '精心打磨，工艺', ai: '正在像匠人一样打磨代码' },
+        { word: 'Creating', cat: '严肃硬核', literal: '创造', ai: '正在创造新世界（或 Bug）' },
+        { word: 'Crunching', cat: '严肃硬核', literal: '大量处理数据', ai: '正在疯狂啃数据（Crunching numbers）' },
+        { word: 'Crystallizing', cat: '高端魔法', literal: '结晶化', ai: '模糊的想法突然变得清晰、结晶了' },
+        { word: 'Cultivating', cat: '生物学生态', literal: '耕作，培养', ai: '正在精心培育这个项目' },
+        { word: 'Deciphering', cat: '严肃硬核', literal: '解密，破译', ai: '正在破译你给的复杂需求' },
+        { word: 'Deliberating', cat: '严肃硬核', literal: '深思熟虑', ai: '正在反复权衡利弊' },
+        { word: 'Determining', cat: '严肃硬核', literal: '决定，测定', ai: '正在判定最佳方案' },
+        { word: 'Dilly-dallying', cat: '摸鱼胡闹', literal: '磨蹭，磨洋工', ai: '正在光明正大地磨洋工' },
+        { word: 'Discombobulating', cat: '大脑宕机', literal: '使混乱，打乱', ai: '彻底疯狂！完全被这个 Bug 搞崩溃了' },
+        { word: 'Doing', cat: '奇怪彩蛋', literal: '做', ai: '别问了，在干了在干了（敷衍）' },
+        { word: 'Doodling', cat: '奇怪彩蛋', literal: '涂鸦', ai: '正在你的代码空白处偷偷画画' },
+        { word: 'Drizzling', cat: '自然现象', literal: '下毛毛雨', ai: '正在给你的终端下点代码毛毛雨' },
+        { word: 'Ebbing', cat: '自然现象', literal: '潮退，衰退', ai: '逻辑思绪正在像潮水一样退去' },
+        { word: 'Effecting', cat: '奇怪彩蛋', literal: '引起，实现', ai: '正在让改变发生' },
+        { word: 'Elucidating', cat: '严肃硬核', literal: '阐明，说明', ai: '正在把复杂逻辑理清楚' },
+        { word: 'Embellishing', cat: '奇怪彩蛋', literal: '润色，修饰', ai: '正在给代码加点花里胡哨的特效' },
+        { word: 'Enchanting', cat: '高端魔法', literal: '施魔法，使迷醉', ai: '正在对你的代码施加魔法' },
+        { word: 'Envisioning', cat: '严肃硬核', literal: '展望，想象', ai: '正在脑补完成后的宏伟蓝图' },
+        { word: 'Evaporating', cat: '自然现象', literal: '蒸发', ai: 'Bug 正在人间蒸发' },
+        { word: 'Fermenting', cat: '厨房重地', literal: '发酵', ai: '让思路发酵一会儿' },
+        { word: 'Fiddle-faddling', cat: '摸鱼胡闹', literal: '废话，瞎折腾', ai: '正在折腾一些没用的小玩意' },
+        { word: 'Finagling', cat: '摸鱼胡闹', literal: '骗取，用诡计弄到', ai: '正在用点见不见得光的小花招把代码搞定' },
+        { word: 'Flambéing', cat: '厨房重地', literal: '火焰料理（淋酒点火）', ai: '正在炫技，给代码表面点个火' },
+        { word: 'Flibbertigibbeting', cat: '摸鱼胡闹', literal: '唠叨/浮躁', ai: '正在碎碎念' },
+        { word: 'Flowing', cat: '自然现象', literal: '流动', ai: '灵感如泉涌，流畅无比' },
+        { word: 'Flummoxing', cat: '大脑宕机', literal: '使困惑', ai: '被你的神级操作完全整不会了' },
+        { word: 'Fluttering', cat: '自然现象', literal: '飘动，扑翼', ai: '蝴蝶翅膀正在扑腾' },
+        { word: 'Forging', cat: '严肃硬核', literal: '锻造，伪造', ai: '正在铁打汉子般锻造核心逻辑' },
+        { word: 'Forming', cat: '严肃硬核', literal: '形成，塑造', ai: '正在给代码初具雏形' },
+        { word: 'Frolicking', cat: '摸鱼胡闹', literal: '嬉戏，雀跃', ai: '正在代码库里快乐地撒欢' },
+        { word: 'Frosting', cat: '厨房重地', literal: '涂糖霜', ai: '正在给程序外观涂一层奶油糖霜' },
+        { word: 'Gallivanting', cat: '摸鱼胡闹', literal: '闲逛，寻欢作乐', ai: '正在到处浪' },
+        { word: 'Galloping', cat: '走迷宫', literal: '（马）飞奔', ai: '进度正在一马平川地飞奔' },
+        { word: 'Garnishing', cat: '厨房重地', literal: '加配菜/装饰', ai: '正在给代码加点好看的修饰' },
+        { word: 'Generating', cat: '严肃硬核', literal: '生成', ai: '正在生成输出' },
+        { word: 'Gesticulating', cat: '奇怪彩蛋', literal: '做手势，手舞足蹈', ai: '正在疯狂比划手势试图跟你沟通' },
+        { word: 'Germinating', cat: '生物学生态', literal: '发芽', ai: '逻辑的种子发芽了' },
+        { word: 'Gitifying', cat: '奇怪彩蛋', literal: 'Git化', ai: '正在执行内部的 Git 版本控制操作' },
+        { word: 'Grooving', cat: '蹦迪摇摆', literal: '享受音乐，渐入佳境', ai: '找到感觉了，正在狂嗨' },
+        { word: 'Gusting', cat: '自然现象', literal: '阵风狂吹', ai: '正在刮起一阵算力狂风' },
+        { word: 'Harmonizing', cat: '蹦迪摇摆', literal: '使和谐，和声', ai: '正在微调让不同的依赖库和谐共处' },
+        { word: 'Hashing', cat: '严肃硬核', literal: '哈希散列，切碎', ai: '正在给数据做哈希/正在切碎处理' },
+        { word: 'Hatching', cat: '严肃硬核', literal: '孵化', ai: '正在孵化一个绝妙的 Idea' },
+        { word: 'Herding', cat: '奇怪彩蛋', literal: '放牧', ai: '放牧猫咪（Herding cats）：形容在管理一堆乱七八糟的代码' },
+        { word: 'Honking', cat: '奇怪彩蛋', literal: '汽车按喇叭', ai: '哔哔！前面的 Bug 让让路！' },
+        { word: 'Hullaballooing', cat: '摸鱼胡闹', literal: '喧嚷，大呼小叫', ai: '正在大呼小叫，吵吵闹闹' },
+        { word: 'Hyperspacing', cat: '高级科幻', literal: '超空间跳跃', ai: '正在通过超空间跃迁快速处理' },
+        { word: 'Ideating', cat: '严肃硬核', literal: '构思', ai: '脑暴中，正在构思方案' },
+        { word: 'Imagining', cat: '严肃硬核', literal: '想象', ai: '正在想象运行成功的样子' },
+        { word: 'Improvising', cat: '蹦迪摇摆', literal: '即兴创作', ai: '完蛋，没写预案，正在当场即兴瞎编代码' },
+        { word: 'Incubating', cat: '严肃硬核', literal: '孵化，保温', ai: '别催，代码还在保温箱里' },
+        { word: 'Inferring', cat: '严肃硬核', literal: '推理', ai: '正在进行 AI 核心深度推理' },
+        { word: 'Infusing', cat: '厨房重地', literal: '浸泡，注入（茶）', ai: '正在把智慧注入到代码里' },
+        { word: 'Ionizing', cat: '高级科幻', literal: '电离', ai: '正在把原子里的电子轰出来（电离中）' },
+        { word: 'Jitterbugging', cat: '蹦迪摇摆', literal: '跳吉特巴舞', ai: '随着欢快的节奏疯狂抖动' },
+        { word: 'Julienning', cat: '厨房重地', literal: '切丝', ai: '正在把复杂的超大函数切成细丝' },
+        { word: 'Kneading', cat: '厨房重地', literal: '揉面', ai: '正在像揉面团一样揉你的代码' },
+        { word: 'Leavening', cat: '厨房重地', literal: '加酵母发酵', ai: '正在让代码膨胀起来' },
+        { word: 'Levitating', cat: '高级科幻', literal: '悬浮', ai: '正在反重力悬浮思考' },
+        { word: 'Lollygagging', cat: '摸鱼胡闹', literal: '闲逛，消磨时间', ai: '正在无所事事地游荡' },
+        { word: 'Manifesting', cat: '高端魔法', literal: '显现，显化', ai: '正在唯心主义式地祈祷代码成功显现' },
+        { word: 'Marinating', cat: '厨房重地', literal: '腌制', ai: '把代码扔在酱汁里腌入味' },
+        { word: 'Meandering', cat: '走迷宫', literal: '蜿蜒而行，漫步', ai: '正在你混乱的代码里漫步' },
+        { word: 'Metamorphosing', cat: '高端魔法', literal: '彻底变形，蜕变', ai: '丑陋的 Bug 正在蜕变成优雅的代码' },
+        { word: 'Misting', cat: '自然现象', literal: '下薄雾，喷雾', ai: '笼罩在一片朦胧的智慧薄雾中' },
+        { word: 'Moonwalking', cat: '蹦迪摇摆', literal: '太空步', ai: '正在向迈克尔·杰克逊致敬，倒着走太空步' },
+        { word: 'Moseying', cat: '走迷宫', literal: '漫步，闲逛', ai: '慢悠悠地在文件里晃荡' },
+        { word: 'Mulling', cat: '严肃硬核', literal: '深思熟虑', ai: '正在反复琢磨' },
+        { word: 'Mustering', cat: '严肃硬核', literal: '召集，鼓起', ai: '正在召集我所有的算力' },
+        { word: 'Musing', cat: '严肃硬核', literal: '若有所思', ai: '正在发呆/若有所思' },
+        { word: 'Nebulizing', cat: '高级科幻', literal: '雾化，使成星云状', ai: '正在把庞大的数据变成一片朦胧星云' },
+        { word: 'Nesting', cat: '生物学生态', literal: '筑巢，（代码）嵌套', ai: '正在疯狂写 if/else 的嵌套（筑巢）' },
+        { word: 'Newspapering', cat: '奇怪彩蛋', literal: '用报纸覆盖', ai: '正在用老报纸把这堆烂摊子先糊上' },
+        { word: 'Noodling', cat: '奇怪彩蛋', literal: '随意地弹乐器，闲逛', ai: '正在瞎琢磨，瞎弹琴' },
+        { word: 'Nucleating', cat: '高级科幻', literal: '成核', ai: '灵感的种子正在核心聚集' },
+        { word: 'Orbiting', cat: '高级科幻', literal: '绕轨道运行', ai: '正在围着你的问题转圈圈' },
+        { word: 'Orchestrating', cat: '严肃硬核', literal: '管弦乐编排，协调', ai: '正在协调各个模块协作' },
+        { word: 'Osmosing', cat: '高级科幻', literal: '渗透', ai: '知识正在通过半透膜悄悄渗透' },
+        { word: 'Perambulating', cat: '走迷宫', literal: '巡视，漫步', ai: '正在巡视你的整个代码仓库' },
+        { word: 'Percolating', cat: '厨房重地', literal: '过滤，渗透（煮咖啡）', ai: '灵感正在像咖啡一样慢慢渗出来' },
+        { word: 'Perusing', cat: '严肃硬核', literal: '精读，细阅', ai: '正在逐行精读你的代码' },
+        { word: 'Philosophising', cat: '严肃硬核', literal: '思考哲学', ai: '思考代码与人生的终极哲学' },
+        { word: 'Photosynthesizing', cat: '高级科幻', literal: '光合作用', ai: '正在吸收屏幕的光线进行“光合作用”' },
+        { word: 'Pollinating', cat: '生物学生态', literal: '传粉', ai: '正在跨模块“传授花粉”' },
+        { word: 'Pondering', cat: '严肃硬核', literal: '沉思', ai: '正在深挖这个问题' },
+        { word: 'Pontificating', cat: '摸鱼胡闹', literal: '武断地发表意见，摆架子', ai: 'AI 正在以专家的姿态对你的代码指点江山' },
+        { word: 'Pouncing', cat: '走迷宫', literal: '猛扑', ai: '看到 Bug 了！猛扑上去！' },
+        { word: 'Precipitating', cat: '高级科幻', literal: '沉淀，（雨雪）落下', ai: '想法正在沉淀析出' },
+        { word: 'Prestidigitating', cat: '高端魔法', literal: '变戏法，变魔术', ai: '见证奇迹的时刻，正在变魔术' },
+        { word: 'Processing', cat: '严肃硬核', literal: '处理', ai: '大脑处理中...' },
+        { word: 'Proofing', cat: '厨房重地', literal: '面团发酵醒面', ai: '逻辑正在“醒面”，请静置' },
+        { word: 'Propagating', cat: '严肃硬核', literal: '传播，繁衍', ai: '正在让逻辑在代码树中繁衍' },
+        { word: 'Puttering', cat: '摸鱼胡闹', literal: '闲荡，磨蹭', ai: '正在东摸西摸，瞎忙活' },
+        { word: 'Puzzling', cat: '严肃硬核', literal: '冥思苦想，困惑', ai: '正在解这个谜题' },
+        { word: 'Quantumizing', cat: '高级科幻', literal: '量子化', ai: '遇事不决，量子力学' },
+        { word: 'Razzle-dazzling', cat: '奇怪彩蛋', literal: '炫目，使眼花缭乱', ai: '正在展示我极其华丽的编码花招' },
+        { word: 'Razzmatazzing', cat: '奇怪彩蛋', literal: '喧闹，华丽的展示', ai: '正在给终端办一场华丽的狂欢秀' },
+        { word: 'Recombobulating', cat: '大脑宕机', literal: '重新恢复秩序', ai: '混乱过后的“一键恢复冷静”' },
+        { word: 'Reticulating', cat: '严肃硬核', literal: '网格化', ai: '经典老梗：正在网格化样条曲线(模拟城市梗)' },
+        { word: 'Roosting', cat: '生物学生态', literal: '栖息，鸟儿归巢', ai: '累了，先在树枝上歇一会儿' },
+        { word: 'Ruminating', cat: '严肃硬核', literal: '反刍，沉思', ai: '正在反复咀嚼你的逻辑' },
+        { word: 'Sautéing', cat: '厨房重地', literal: '爆炒', ai: '正在用大火爆炒这几个 Bug' },
+        { word: 'Scampering', cat: '走迷宫', literal: '惊惶奔跑，蹦蹦跳跳', ai: '像小老鼠一样在后台乱窜' },
+        { word: 'Schlepping', cat: '走迷宫', literal: '费力地搬运/行走', ai: '这代码太沉了，正在吃力地拖着走' },
+        { word: 'Scurrying', cat: '走迷宫', literal: '急促地跑', ai: '正在急匆匆地赶路' },
+        { word: 'Seasoning', cat: '厨房重地', literal: '调味', ai: '正在给代码撒点盐和胡椒粉' },
+        { word: 'Shenaniganing', cat: '摸鱼胡闹', literal: '搞恶作剧，耍诡计', ai: '正在搞点小花招/恶作剧' },
+        { word: 'Shimmying', cat: '蹦迪摇摆', literal: '剧烈晃动（舞蹈动作）', ai: '正在疯狂扭动肩膀' },
+        { word: 'Simmering', cat: '厨房重地', literal: '慢炖', ai: '正在用文火慢炖这段复杂的算法' },
+        { word: 'Skedaddling', cat: '走迷宫', literal: '逃跑，急急逃走', ai: '溜了溜了（其实是在快速干活）' },
+        { word: 'Sketching', cat: '严肃硬核', literal: '画素描，勾勒', ai: '正在勾勒代码草图' },
+        { word: 'Slithering', cat: '走迷宫', literal: '（像蛇一样）游动，滑行', ai: '正在像蛇一样穿梭在逻辑文件里' },
+        { word: 'Smooshing', cat: '奇怪彩蛋', literal: '把...压碎，挤压', ai: '强行把这两个冲突的模块挤压在一起' },
+        { word: 'Sock-hopping', cat: '蹦迪摇摆', literal: '参加袜子舞会', ai: '正在参加老派的校园复古舞会' },
+        { word: 'Spelunking', cat: '走迷宫', literal: '洞穴探险', ai: '正在潜入你深不可测的复杂代码库里探险' },
+        { word: 'Spinning', cat: '奇怪彩蛋', literal: '旋转', ai: '脑子像陀螺一样转' },
+        { word: 'Sprouting', cat: '生物学生态', literal: '抽芽', ai: '代码正在嗖嗖地往外冒新芽' },
+        { word: 'Stewing', cat: '厨房重地', literal: '炖', ai: '正在一锅炖' },
+        { word: 'Sublimating', cat: '高级科幻', literal: '升华（固态直接变气态）', ai: '思想高度瞬间升华了' },
+        { word: 'Swirling', cat: '自然现象', literal: '旋转，漩涡', ai: '逻辑在脑子里打转' },
+        { word: 'Swooping', cat: '走迷宫', literal: '俯冲', ai: '从天而降，俯冲解决问题' },
+        { word: 'Symbioting', cat: '生物学生态', literal: '共生', ai: '正在和你的操作系统达成完美的生态共生' },
+        { word: 'Synthesizing', cat: '严肃硬核', literal: '合成', ai: '正在把各种想法合成最终代码' },
+        { word: 'Tempering', cat: '厨房重地', literal: '调温，调质', ai: '正在给代码“淬火”/调整最佳状态' },
+        { word: 'Thinking', cat: '严肃硬核', literal: '思考', ai: '最朴素的“我在想”' },
+        { word: 'Thundering', cat: '自然现象', literal: '雷神轰鸣', ai: '势如破竹，雷霆万钧地在处理' },
+        { word: 'Tinkering', cat: '严肃硬核', literal: '捣鼓，做小修改', ai: '正在这里修修，那里补补' },
+        { word: 'Tomfoolering', cat: '摸鱼胡闹', literal: '瞎闹，胡乱干事', ai: '正在像个傻子一样胡闹' },
+        { word: 'Topsy-turvying', cat: '大脑宕机', literal: '翻天覆地，颠倒', ai: '正在把整个代码库底朝天翻过来' },
+        { word: 'Transfiguring', cat: '高端魔法', literal: '变形，改观', ai: '正在给你的老代码整容' },
+        { word: 'Transmuting', cat: '高端魔法', literal: '炼金术的“嬗变”', ai: '正在点石成金，把垃圾代码变成神作' },
+        { word: 'Twisting', cat: '奇怪彩蛋', literal: '扭曲', ai: '正在扭曲时空来解决这个 Bug' },
+        { word: 'Undulating', cat: '自然现象', literal: '波动，起伏', ai: '代码电波正如波浪般起伏律动' },
+        { word: 'Unfurling', cat: '高端魔法', literal: '展开（旗帜/卷轴）', ai: '正在缓缓展开神秘的代码卷轴' },
+        { word: 'Unravelling', cat: '高端魔法', literal: '解开（毛线），阐明', ai: '正在把一团乱麻的线头解开' },
+        { word: 'Vibing', cat: '蹦迪摇摆', literal: '融入氛围', ai: '氛围感编码（Vibe coding）中，全凭感觉' },
+        { word: 'Waddling', cat: '走迷宫', literal: '（像鸭子一样）摇摆走', ai: '走起路来摇摇摆摆' },
+        { word: 'Wandering', cat: '走迷宫', literal: '游荡', ai: '迷失在你的代码迷宫里' },
+        { word: 'Warping', cat: '高级科幻', literal: '弯曲，曲速飞行', ai: '正在开启曲速引擎跨越时空' },
+        { word: 'Whatchamacalliting', cat: '摸鱼胡闹', literal: '“那个叫什么来着的”', ai: '糟糕，我突然忘了这个词叫啥了' },
+        { word: 'Whirlpooling', cat: '自然现象', literal: '形成漩涡', ai: '陷入了逻辑的大漩涡' },
+        { word: 'Whirring', cat: '自然现象', literal: '机器转动的嗡嗡声', ai: '服务器 CPU 正在疯狂发出嗡嗡声' },
+        { word: 'Whisking', cat: '厨房重地', literal: '打蛋，拂动', ai: '正在疯狂打蛋/搅拌代码' },
+        { word: 'Wibbling', cat: '摸鱼胡闹', literal: '颤动，说废话', ai: '正在胡言乱语/发抖' },
+        { word: 'Working', cat: '严肃硬核', literal: '工作', ai: '我在搬砖了！' },
+        { word: 'Wrangling', cat: '严肃硬核', literal: '（像牛仔一样）驯服', ai: '正在驯服这堆乱七八糟的数据' },
+        { word: 'Zesting', cat: '厨房重地', literal: '削柠檬皮屑调味', ai: '正在给成果加入最后一点灵魂风味' },
+        { word: 'Zigzagging', cat: '走迷宫', literal: 'Z字形移动', ai: '正在蛇皮走位，曲折前进' }
+    ];
+
+    const searchBox = document.getElementById('searchBox');
+    const wordList = document.getElementById('wordList');
+    const stats = document.getElementById('stats');
+
+    function highlightText(text, keyword) {
+        if (!keyword) return text;
+        const regex = new RegExp(`(${keyword})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    function renderWords(keyword = '') {
+        const cleanKeyword = keyword.trim().toLowerCase();
+        
+        const filtered = dictionary.filter(item => {
+            return item.word.toLowerCase().includes(cleanKeyword) ||
+                   item.cat.toLowerCase().includes(cleanKeyword) ||
+                   item.literal.toLowerCase().includes(cleanKeyword) ||
+                   item.ai.toLowerCase().includes(cleanKeyword);
+        });
+
+        stats.innerText = `共收录 ${dictionary.length} 个官方状态词 | 找到 ${filtered.length} 个匹配结果`;
+
+        if (filtered.length === 0) {
+            wordList.innerHTML = '<div class="no-results">🔍 没有找到相关的魔法词汇，换个词试试吧？</div>';
+            return;
+        }
+
+        wordList.innerHTML = filtered.map(item => `
+            <div class="word-card">
+                <div class="word-header">
+                    <div class="word-name">${highlightText(item.word, cleanKeyword)}</div>
+                    <div class="word-category">${highlightText(item.cat, cleanKeyword)}</div>
+                </div>
+                <div class="word-body">
+                    <div class="meaning-item">
+                        <span class="label">字面释义:</span>
+                        <span class="value-literal">${highlightText(item.literal, cleanKeyword)}</span>
+                    </div>
+                    <div class="meaning-item">
+                        <span class="label">Claude 状态:</span>
+                        <span class="value-ai">${highlightText(item.ai, cleanKeyword)}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    searchBox.addEventListener('input', (e) => {
+        renderWords(e.target.value);
+    });
+
+    renderWords();
+</script>
+
+</body>
+</html>
