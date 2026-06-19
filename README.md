@@ -1,7 +1,7 @@
 # 🔮 Claude Code 动画魔法词典 (Claude Code Spinner Dictionary)
 
-[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+[![GitHub license](https://img.shields.io/github/license/coftens/claude-dictionary?style=flat-square)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/coftens/claude-dictionary/pulls)
 
 一个专为 `claude-code` CLI 用户打造的 **加载动画（Spinner）状态词典网页**。它完美收录了官方内置的 **185 个进行时动词** 以及任务结束结算时才会出现的 **8 个过去式状态词**（共 193 个），并为每一个硬核或摸鱼的状态提供了极其贴合 AI 结对编程（Pair Programming）语境的趣味翻译和极客梗解。
 
